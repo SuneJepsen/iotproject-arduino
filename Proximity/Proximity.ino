@@ -11,7 +11,7 @@
 
 bool DEBUG = true;
 
-time_t t = now();
+time_t t;
 
 bool isStart = true;
 
@@ -26,6 +26,7 @@ void setup() {
   ledGreenLight(HIGH);
   frame.startTime = 0;
   frame.endTime = 0;
+
   
   if(DEBUG) {
       SerialUSB.begin(115200);
@@ -43,6 +44,8 @@ void setup() {
 }
 
 void loop() {  
+  t = now();
+  
   checkSomethingOn();
   
   if(DEBUG) {
@@ -62,15 +65,15 @@ void checkSomethingOn() {
 
   if(proximity < threshold && isStart){
     isStart = false;
-    frame.startTime = second(now());
+    frame.startTime = t;
     SerialUSB.print("Second t1 ");
-    SerialUSB.println(second(now()));
+    SerialUSB.println(t);
     SerialUSB.print("startTime ");
     SerialUSB.println(frame.startTime);
   } else if (proximity > threshold && !isStart){
-    frame.endTime = second(now());
+    frame.endTime = t;
     SerialUSB.print("Second t2 ");
-    SerialUSB.println(second(now()));
+    SerialUSB.println(t);
     isStart = true;
     SerialUSB.print("endTime ");
     SerialUSB.println(frame.endTime);
@@ -128,18 +131,8 @@ bool sendSigfox(const void* data, uint8_t len){
 
 String getSigfoxFrame(const void* data, uint8_t len){
   String frame = "";
-  SerialUSB.print("Frame ");
-  SerialUSB.println(frame);
   uint8_t* bytes = (uint8_t*)data;
   //SerialUSB.println(bytes);
-  
-  if (len < SIGFOX_FRAME_LENGTH){
-    //fill with zeros
-    uint8_t i = SIGFOX_FRAME_LENGTH;
-    while (i-- > len){
-      frame += "00";
-    }
-  }
 
   //0-1 == 255 --> (0-1) > len
   for(uint8_t i = len-1; i < len; --i) {
