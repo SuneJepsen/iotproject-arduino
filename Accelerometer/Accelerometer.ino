@@ -1,60 +1,145 @@
+#include <TimeLib.h>
 
-
-/*
-    smeAccelerometer Library - Localization Information
-
-    This example print the 3Axis X,Y,Z information
-
-    created 27 May 2015
-    by Seve (seve@axelelettronica.it)
-
-    This example is in the public domain
-    https://github.com/ameltech
-
-    LSM9DS1  more information available here:
-    http://www.stmicroelectronics.com.cn/web/catalog/sense_power/FM89/SC1448/SC1448/PF259998
- */
-
-#include <Arduino.h>
-#include <Wire.h>
 #include <LSM9DS1.h>
+#include <Wire.h>
+#include <Arduino.h>
+#include <Time.h>
 
+#define SIGFOX_FRAME_LENGTH 12
 
-// the setup function runs once when you press reset or power the board
+bool DEBUG = true;
+
+time_t t;
+
+bool isStart = true;
+
+struct data {
+  int startTime;
+  int endTime;
+};
+
+data frame;
+
 void setup() {
-    Wire.begin();
-    smeAccelerometer.begin();
-    SerialUSB.begin(115200);
+  ledGreenLight(HIGH);
+  frame.startTime = 0;
+  frame.endTime = 0;
+
+  
+  if(DEBUG) {
+      SerialUSB.begin(115200);
+      SerialUSB.println("Welcome");
+        while (!SerialUSB) {
+        ; 
+      }
+  }   
+  smeAccelerometer.begin();
+  
+  SigFox.begin(19200);
+  initSigfox();
+  
+  ledGreenLight(LOW);
 }
 
-void printAxis(int x, int y, int z) {
-    SerialUSB.print("  X = ");
-    SerialUSB.print(x, DEC);
-    SerialUSB.print("     Y = ");
-    SerialUSB.print(y, DEC);
-    SerialUSB.print("     Z = ");
-    SerialUSB.println(z, DEC);
+void loop() {  
+  t = now();
+  
+  checkSomethingOn();
+  
+  if(DEBUG) {
+    SerialUSB.println("Thats one loop!");
+  }
+  delay(100);
+  ledGreenLight(LOW);
+  ledRedLight(LOW);
 }
 
-// the loop function runs over and over again forever
-void loop() {
+void checkSomethingOn() {
+  int z = smeAccelerometer.readZ();
+  SerialUSB.print("Z axis ");
+  SerialUSB.println(z);
+  
+  int threshold = 100;
 
-    int x = 0;
-    int y = 0;
-    int z = 0;
+  if(z < -threshold && isStart){
+    isStart = false;
+    frame.startTime = t;
+    SerialUSB.print("Second t1 ");
+    SerialUSB.println(t);
+    SerialUSB.print("startTime ");
+    SerialUSB.println(frame.startTime);
+  } else if (z > threshold && !isStart){
+    frame.endTime = t;
+    SerialUSB.print("Second t2 ");
+    SerialUSB.println(t);
+    isStart = true;
+    SerialUSB.print("endTime ");
+    SerialUSB.println(frame.endTime);
+    sendSigfox(&frame, sizeof(data));
+  } 
+}
 
-    x = smeAccelerometer.readX();
-    y = smeAccelerometer.readY();
-    z = smeAccelerometer.readZ();
-    SerialUSB.print('\n');
-    SerialUSB.print("Accelerometer [mg]      :");
-    printAxis(x, y, z);
-
-
-    ledBlueLight(LOW);
+void initSigfox(){
+  SigFox.print("+++");
+  while (!SigFox.available()){
     delay(100);
-
-    ledBlueLight(HIGH);    // turn the LED on
-    delay(500);            // wait for a second
-
+  }
+  while (SigFox.available()){
+    byte serialByte = SigFox.read();
+    if (DEBUG){
+      SerialUSB.print("Serial Byte ");
+      SerialUSB.println(serialByte);
+    }
+  }
+  if (DEBUG){
+    SerialUSB.println("\n ** Setup OK **");
+  }
 }
+
+bool sendSigfox(const void* data, uint8_t len){
+  String frame = getSigfoxFrame(data, len);
+  String status = "";
+  char output;
+  if (DEBUG){
+    SerialUSB.print("AT$SF=");
+    SerialUSB.println(frame);
+  }
+  SigFox.print("AT$SF=");
+  SigFox.print(frame);
+  SigFox.print("\r");
+  while (!SigFox.available());
+  
+  while(SigFox.available()){
+    output = (char)SigFox.read();
+    status += output;
+    delay(10);
+  }
+  if (DEBUG){
+    SerialUSB.print("Status \t");
+    SerialUSB.println(status);
+  }
+  if (status == "OK\r"){
+    //Success :)
+    return true;
+  }
+  else{
+    return false;
+  }
+}
+
+String getSigfoxFrame(const void* data, uint8_t len){
+  String frame = "";
+  uint8_t* bytes = (uint8_t*)data;
+  //SerialUSB.println(bytes);
+
+  //0-1 == 255 --> (0-1) > len
+  for(uint8_t i = len-1; i < len; --i) {
+    if (bytes[i] < 16) {frame+="0";}
+    frame += String(bytes[i], HEX);
+    SerialUSB.print("Frame ");
+    SerialUSB.println(frame);
+  }
+  
+  return frame;
+}
+
