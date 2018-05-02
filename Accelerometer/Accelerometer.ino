@@ -37,7 +37,7 @@ void setup() {
   
   SigFox.begin(19200);
   initSigfox();
-  
+  sendSigfox(&frame, sizeof(data));
   ledGreenLight(LOW);
 }
 
