@@ -16,6 +16,8 @@ bool isStart = true;
 struct data {
   int startTime;
   int endTime;
+  // Write the title backwards, because sigfox
+  const char title[4] = "CCA";
 };
 
 data frame;
@@ -37,7 +39,7 @@ void setup() {
   
   SigFox.begin(19200);
   initSigfox();
-  sendSigfox(&frame, sizeof(data));
+  sendSigfox(&frame, sizeof(data)-1);
   ledGreenLight(LOW);
 }
 
@@ -75,7 +77,7 @@ void checkSomethingOn() {
     isStart = true;
     SerialUSB.print("endTime ");
     SerialUSB.println(frame.endTime);
-    sendSigfox(&frame, sizeof(data));
+    sendSigfox(&frame, sizeof(data)-1);
   } 
 }
 
