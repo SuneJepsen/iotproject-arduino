@@ -1,3 +1,9 @@
+/*
+* Code inspiration from: 
+*     https://github.com/nicolsc/sigfox-weather-station/blob/master/sigfox_smart_weather.ino
+*     https://github.com/ameltech/sme-vl6180x-library
+*/
+
 #include <TimeLib.h>
 
 #include <VL6180.h>
@@ -47,7 +53,7 @@ void setup() {
 void loop() {  
   t = now();
   
-  checkSomethingOn();
+  proximeterLogic();
   
   if(DEBUG) {
     SerialUSB.println("Thats one loop!");
@@ -57,7 +63,7 @@ void loop() {
   ledRedLight(LOW);
 }
 
-void checkSomethingOn() {
+void proximeterLogic() {
   int proximity = smeProximity.rangePollingRead();
   SerialUSB.print("Proximity ");
   SerialUSB.println(proximity);
