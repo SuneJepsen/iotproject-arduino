@@ -1,3 +1,9 @@
+/*
+* Code inspiration from: 
+*     https://github.com/nicolsc/sigfox-weather-station/blob/master/sigfox_smart_weather.ino
+*     https://github.com/ameltech/sme-lsm9ds1-library
+*/
+
 #include <TimeLib.h>
 
 #include <LSM9DS1.h>
@@ -46,7 +52,7 @@ void setup() {
 
 void loop() {
   t = now();
-  checkSomethingOn();
+  accelerometerLogic();
 
   if (DEBUG) {
     SerialUSB.println("Thats one loop!");
@@ -56,7 +62,7 @@ void loop() {
   ledRedLight(LOW);
 }
 
-void checkSomethingOn() {
+void accelerometerLogic() {
   int z = smeAccelerometer.readZ();
   SerialUSB.print("Z axis ");
   SerialUSB.println(z);
